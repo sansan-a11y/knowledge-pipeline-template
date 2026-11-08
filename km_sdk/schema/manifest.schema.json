@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://knowledge.pipeline/schema/km-manifest-v1.json",
+  "title": "Knowledge Pipeline Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "const": "knowledge.pipeline/v1"
+    },
+    "kind": {
+      "const": "KnowledgeExtractionPipeline"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "owner"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "owner": {
+          "type": "string",
+          "pattern": "^(team:[A-Za-z0-9._-]+|[^@\\s]+@[^@\\s]+\\.[^@\\s]+)$"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "partition", "stages"],
+      "properties": {
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contractVersion", "artifactStore"],
+          "properties": {
+            "contractVersion": {
+              "const": 1
+            },
+            "artifactStore": {
+              "const": "object_store"
+            }
+          }
+        },
+        "partition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["keyTemplate", "requiredTags"],
+          "properties": {
+            "keyTemplate": {
+              "const": "{doc_id}__{doc_version}"
+            },
+            "requiredTags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true,
+              "contains": {
+                "const": "tenant"
+              }
+            }
+          }
+        },
+        "stages": {
+          "$ref": "#/$defs/stages"
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "llm": {
+              "$ref": "#/$defs/resourceProfile"
+            },
+            "embedding": {
+              "$ref": "#/$defs/resourceProfile"
+            },
+            "index": {
+              "$ref": "#/$defs/resourceProfile"
+            }
+          }
+        },
+        "options": {
+          "$ref": "#/$defs/options"
+        },
+        "fixtures": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "request": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "options": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "retry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxRetries"],
+      "properties": {
+        "maxRetries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "delaySeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "backoff": {
+          "enum": ["fixed", "exponential"]
+        }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["handler", "timeoutSeconds"],
+      "properties": {
+        "handler": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_.]*:[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "timeoutSeconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 86400
+        },
+        "retry": {
+          "$ref": "#/$defs/retry"
+        },
+        "options": {
+          "$ref": "#/$defs/options"
+        }
+      }
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ingest", "parse", "extraction", "assemble", "validation", "publish"],
+      "properties": {
+        "ingest": {
+          "$ref": "#/$defs/stage"
+        },
+        "parse": {
+          "$ref": "#/$defs/stage"
+        },
+        "extraction": {
+          "$ref": "#/$defs/stage"
+        },
+        "assemble": {
+          "$ref": "#/$defs/stage"
+        },
+        "validation": {
+          "$ref": "#/$defs/stage"
+        },
+        "publish": {
+          "$ref": "#/$defs/stage"
+        }
+      }
+    },
+    "resourceProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile"],
+      "properties": {
+        "profile": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,63}$"
+        }
+      }
+    }
+  }
+}

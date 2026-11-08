@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.km/
+.template_data/
+.dagster_home/
+.env
+build/
+dist/
+*.pptx.tmp

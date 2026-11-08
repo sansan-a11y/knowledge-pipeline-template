@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>知識抽取 Pipeline Template v1</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#f6f8fb}
+body{
+  color:#172033;
+  font-family:"Microsoft JhengHei","Microsoft YaHei","Segoe UI",sans-serif;
+}
+.page{
+  width:1800px;height:1200px;padding:28px 36px 24px;
+  background:#f6f8fb;display:flex;flex-direction:column;
+}
+.top{display:flex;gap:28px;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+h1{margin:0;font-size:34px;line-height:1.18;letter-spacing:0}
+.subtitle{margin:8px 0 0;color:#5d6b7e;font-size:14.5px;line-height:1.52}
+.subtitle b{color:#172033}
+.verdict{
+  flex:0 0 510px;border:1.5px solid #afc6e7;border-left:6px solid #2459a6;
+  border-radius:8px;background:#f2f7ff;padding:12px 15px;color:#244263;
+  font-size:12.6px;line-height:1.55
+}
+.verdict strong{display:block;color:#173a6a;font-size:14px;margin-bottom:3px}
+.legend{display:flex;align-items:center;gap:9px;margin:0 0 13px}
+.pill{border:1px solid;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700}
+.pill.flow{color:#17634c;background:#edf9f3;border-color:#add8c3}
+.pill.gate{color:#9a5c08;background:#fff8eb;border-color:#e9c993}
+.pill.state{color:#2554a3;background:#eef4ff;border-color:#b7c9e8}
+.pill.publish{color:#0d6e6a;background:#eaf8f7;border-color:#a8d8d5}
+.legend-note{margin-left:auto;color:#6a788a;font-size:11.5px}
+
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:0 2px 8px}
+.section-head strong{font-size:14px}
+.section-head span{font-size:11.5px;color:#6b788a}
+.pipeline{
+  position:relative;border:1.5px solid #d6dfeb;border-radius:12px;
+  background:#fff;padding:14px 16px 13px;margin-bottom:15px
+}
+.stage-track{display:grid;grid-template-columns:repeat(6,1fr);gap:25px}
+.stage{
+  position:relative;min-height:225px;border:1.6px solid;border-radius:8px;
+  padding:12px 12px 11px;background:#fff
+}
+.stage:not(:last-child)::after{
+  content:"→";position:absolute;right:-21px;top:101px;color:#7c8da2;
+  font-size:23px;font-weight:800;z-index:2
+}
+.stage.ingest{border-color:#8ab3de;background:#f7fbff}
+.stage.parse{border-color:#83c6c4;background:#f5fcfb}
+.stage.extraction{border-color:#e2bd78;background:#fffcf4}
+.stage.assemble{border-color:#a8a5dc;background:#faf9ff}
+.stage.validation{border-color:#df9b8e;background:#fff8f6;border-width:2.5px;box-shadow:0 0 0 4px #fae9e4}
+.stage.publish{border-color:#79b89b;background:#f4fbf7}
+.stage-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.num{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:#fff;background:#26364d;font-size:12px;font-weight:800
+}
+.kind{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.ingest .kind{color:#27649e}.parse .kind{color:#17786e}.extraction .kind{color:#98600b}
+.assemble .kind{color:#5f5bb0}.validation .kind{color:#a34c3c}.publish .kind{color:#157457}
+.stage h2{margin:0 0 2px;font-size:20px;line-height:1.18;font-family:Consolas,"Microsoft JhengHei",sans-serif}
+.role{margin:0 0 6px;color:#26364d;font-size:13px;font-weight:800}
+.desc{margin:0;color:#607086;font-size:11.7px;line-height:1.46;min-height:51px}
+.artifact{
+  margin-top:8px;border:1px solid #dbe3ed;border-radius:7px;background:#fff;
+  padding:6px 8px;color:#34465f;font-size:10.4px;line-height:1.35
+}
+.artifact b{display:block;color:#8290a3;font-size:9.4px;text-transform:uppercase;margin-bottom:1px}
+.artifact code{font-family:Consolas,monospace;color:#172033;font-size:10.8px;font-weight:700}
+.gate-tag{
+  display:inline-block;margin-top:7px;border-radius:999px;padding:2px 8px;
+  font-size:9.8px;font-weight:800;border:1px solid
+}
+.gate-tag.standard{color:#526175;background:#f7f9fc;border-color:#d5deea}
+.gate-tag.block{color:#9d3d31;background:#fff1ed;border-color:#edb9ae}
+.gate-tag.publish{color:#0d7059;background:#eaf8f2;border-color:#a9d8c5}
+
+.detail-grid{display:grid;grid-template-columns:1.28fr .72fr;gap:15px;margin-bottom:15px}
+.panel{border:1.5px solid #d4ddea;border-radius:10px;background:#fff;padding:13px 15px}
+.panel-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.panel-title strong{font-size:14px}
+.panel-title span{font-size:10.8px;color:#738196}
+.boundary{display:grid;grid-template-columns:1fr 38px 1fr;gap:8px;align-items:stretch;margin-bottom:10px}
+.boundary-box{border:1.3px solid;border-radius:8px;padding:9px 11px;background:#fff}
+.boundary-box.fixed{border-color:#9cbbe4;background:#f5f9ff}
+.boundary-box.free{border-color:#a8d2bd;background:#f5fbf7}
+.boundary-box b{display:block;font-size:12.5px;margin-bottom:3px}
+.boundary-box p{margin:0;color:#5f6d80;font-size:10.8px;line-height:1.45}
+.boundary-arrow{display:flex;align-items:center;justify-content:center;color:#75869b;font-size:23px}
+.rule-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rule{border:1px solid #dce4ee;border-radius:7px;background:#fbfcfe;padding:8px 9px;color:#5d6c80;font-size:10.8px;line-height:1.43}
+.rule b{display:block;color:#26364e;font-size:11.4px;margin-bottom:2px}
+.rule code{font-family:Consolas,monospace;color:#1f4f8e;font-size:10.2px}
+
+.gate-panel{border-color:#e4c5bb;background:#fffaf8}
+.validation-flow{display:grid;grid-template-columns:1fr 30px 1fr;gap:6px;align-items:center;margin:3px 0 9px}
+.vbox{border:1.2px solid #e5b9ae;border-radius:7px;background:#fff;padding:8px 9px;font-size:10.8px;line-height:1.45;min-height:86px}
+.vbox b{display:block;font-size:11.8px;margin-bottom:3px;color:#8d3d31}
+.vbox.pass{border-color:#aad5be;background:#f5fbf7}.vbox.pass b{color:#17704f}
+.varrow{text-align:center;color:#a76c62;font-size:20px}
+.gate-checks{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.check{font-size:9.8px;font-weight:700;color:#8a5445;background:#fff;border:1px solid #e7c5bc;border-radius:999px;padding:2px 7px}
+.gate-note{border-left:4px solid #c15d48;border-radius:0 7px 7px 0;background:#fff3ef;padding:8px 10px;color:#6c463e;font-size:10.7px;line-height:1.48}
+.gate-note b{color:#9b3f30}
+
+.runtime{border:1.5px solid #c9d7e8;border-radius:10px;background:#fbfdff;padding:13px 15px;margin-bottom:12px}
+.runtime-track{display:grid;grid-template-columns:1.1fr 28px .95fr 28px .9fr;gap:8px;align-items:stretch}
+.runtime-col{border:1.4px solid #d5deea;border-radius:8px;background:#fff;padding:10px 11px}
+.runtime-col.control{border-color:#d7ba88;background:#fffbf4}
+.runtime-col.bff{border-color:#9fbce5;background:#f5f9ff}
+.runtime-col.ui{border-color:#9dcfbd;background:#f4fbf7}
+.runtime-col h3{margin:0 0 5px;font-size:12.5px}
+.runtime-col p{margin:0;color:#5d6b7f;font-size:10.8px;line-height:1.45}
+.runtime-arrow{align-self:center;text-align:center;color:#72839a;font-size:22px;font-weight:800}
+.state-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.state{font-size:9.8px;font-weight:800;border:1px solid;border-radius:999px;padding:2px 8px}
+.state.pending{color:#5d6b7f;background:#f6f8fb;border-color:#d6deea}
+.state.running{color:#1e55a7;background:#eef4ff;border-color:#b8cae9}
+.state.pass{color:#17704f;background:#edf9f3;border-color:#afd9c4}
+.state.fail{color:#9a4034;background:#fff1ed;border-color:#eab8ad}
+.state.block{color:#935a10;background:#fff8ec;border-color:#e9cc9d}
+.footer{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:auto
+}
+.callout{
+  border-left:5px solid #2459a6;border-radius:0 8px 8px 0;background:#f1f6fd;
+  padding:10px 13px;color:#40536b;font-size:11.3px;line-height:1.5
+}
+.callout b{color:#174787}
+.callout.green{border-left-color:#178067;background:#eff9f5;color:#425a53}
+.callout.green b{color:#116a57}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div>
+      <h1>知識抽取 Pipeline Template v1</h1>
+      <p class="subtitle">
+        固定六個可觀察的交付階段，保留 stage 內部的 asset 拆分自由；
+        <b>validation 獨立成為發布門禁，publish 只做原子發布。</b>
+      </p>
+    </div>
+    <div class="verdict">
+      <strong>Template 的核心契約</strong>
+      每個 stage 必須有一個 terminal asset。前端只讀固定 stage 與狀態；
+      跨 stage 只接 terminal asset；validation 未通過時 publish 不得執行。
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="pill flow">固定交付邊界</span>
+    <span class="pill gate">Validation gate</span>
+    <span class="pill state">Dagster 狀態投影</span>
+    <span class="pill publish">原子發布</span>
+    <span class="legend-note">RUN_SUCCESS ≠ PUBLISHED</span>
+  </div>
+
+  <section class="pipeline">
+    <div class="section-head">
+      <strong>1 · 六階段固定 asset 鏈</strong>
+      <span>每個方塊是 stage terminal；灰色小框是下游可依賴的交付物</span>
+    </div>
+    <div class="stage-track">
+      <div class="stage ingest">
+        <div class="stage-top"><span class="num">1</span><span class="kind">Source</span></div>
+        <h2>ingest</h2>
+        <p class="role">取得並登記文件</p>
+        <p class="desc">可讀性、MIME、hash、doc_id/version、tenant 與來源 URI。這裡不解析內容。</p>
+        <div class="artifact"><b>terminal output</b><code>ingested_document</code></div>
+        <span class="gate-tag standard">source contract</span>
+      </div>
+      <div class="stage parse">
+        <div class="stage-top"><span class="num">2</span><span class="kind">Understand</span></div>
+        <h2>parse</h2>
+        <p class="role">解析、分類與切塊</p>
+        <p class="desc">頁面、OCR、版面、表格、chunk id 與來源定位。輸出必須能精確回溯。</p>
+        <div class="artifact"><b>terminal output</b><code>parsed_document</code></div>
+        <span class="gate-tag standard">page + chunk checks</span>
+      </div>
+      <div class="stage extraction">
+        <div class="stage-top"><span class="num">3</span><span class="kind">Analyze</span></div>
+        <h2>extraction</h2>
+        <p class="role">抽取候選知識</p>
+        <p class="desc">實體、關係、屬性與引用片段；記錄 model、prompt 與 schema 版本。</p>
+        <div class="artifact"><b>terminal output</b><code>extracted_knowledge</code></div>
+        <span class="gate-tag standard">schema + graph checks</span>
+      </div>
+      <div class="stage assemble">
+        <div class="stage-top"><span class="num">4</span><span class="kind">Curate</span></div>
+        <h2>assemble</h2>
+        <p class="role">整理與組裝草稿</p>
+        <p class="desc">去重、別名合併、實體對齊、引用交叉連結與 knowledge document draft。</p>
+        <div class="artifact"><b>terminal output</b><code>assembled_document</code></div>
+        <span class="gate-tag standard">draft contract checks</span>
+      </div>
+      <div class="stage validation">
+        <div class="stage-top"><span class="num">5</span><span class="kind">Gate</span></div>
+        <h2>validation</h2>
+        <p class="role">判斷能不能發布</p>
+        <p class="desc">schema、引用、圖內一致性、coverage、grounding 與 policy；產出可審計報告。</p>
+        <div class="artifact"><b>terminal output</b><code>validation_report</code></div>
+        <span class="gate-tag block">BLOCKING GATE</span>
+      </div>
+      <div class="stage publish">
+        <div class="stage-top"><span class="num">6</span><span class="kind">Release</span></div>
+        <h2>publish</h2>
+        <p class="role">原子切換可見版本</p>
+        <p class="desc">確認 report、shadow 寫入、smoke query、write-after-read，最後切換 visible pointer。</p>
+        <div class="artifact"><b>terminal output</b><code>published_document</code></div>
+        <span class="gate-tag publish">atomic + idempotent</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="detail-grid">
+    <section class="panel">
+      <div class="panel-title">
+        <strong>2 · 邊界固定，內部自由</strong>
+        <span>StageSpec + canonical group + terminal asset</span>
+      </div>
+      <div class="boundary">
+        <div class="boundary-box fixed">
+          <b>跨團隊契約</b>
+          <p>固定 stage 順序、terminal asset、partition、metadata 與狀態。<br>前端與 BFF 只看這一層。</p>
+        </div>
+        <div class="boundary-arrow">→</div>
+        <div class="boundary-box free">
+          <b>Stage 內部實作</b>
+          <p>可依網路、CPU、GPU、模型呼叫拆成多個 asset；可 fan-out、fan-in、使用 Pipes。</p>
+        </div>
+      </div>
+      <div class="rule-grid">
+        <div class="rule"><b>每 stage 一個 terminal</b>例如 parse 可以有 page_image、chunks，但下游只依賴 <code>parsed_document</code>。</div>
+        <div class="rule"><b>每 stage 一個 group</b><code>km__&lt;pipeline&gt;__&lt;stage&gt;</code> 支援只修復單一 stage。</div>
+        <div class="rule"><b>每個 terminal 有 checks</b>Validation gate 是正式發布前的最後硬門禁。</div>
+      </div>
+    </section>
+
+    <section class="panel gate-panel">
+      <div class="panel-title">
+        <strong>3 · Publication gate</strong>
+        <span>validation 失敗即 block publish</span>
+      </div>
+      <div class="validation-flow">
+        <div class="vbox">
+          <b>Validation report</b>
+          rule_id · severity<br>threshold · observed<br>blocking failures · warnings
+        </div>
+        <div class="varrow">→</div>
+        <div class="vbox pass">
+          <b>Publish preflight</b>
+          report 與文件版本一致<br>blocking failures = 0<br>舊版本仍可見
+        </div>
+      </div>
+      <div class="gate-checks">
+        <span class="check">schema</span><span class="check">references</span>
+        <span class="check">graph integrity</span><span class="check">coverage</span>
+        <span class="check">grounding</span>
+      </div>
+      <div class="gate-note">
+        <b>Fail closed：</b>validation 失敗時，publish step 不執行；report 保留供診斷與重試。
+        不用文字 log 判斷門禁，也不允許 partial knowledge 流向使用者。
+      </div>
+    </section>
+  </div>
+
+  <section class="runtime">
+    <div class="section-head">
+      <strong>4 · 從 Dagster 事件到固定前端狀態</strong>
+      <span>BFF projection 是緩存，可從 Dagster 對賬重建</span>
+    </div>
+    <div class="runtime-track">
+      <div class="runtime-col control">
+        <h3>Dagster 真相源</h3>
+        <p><code>AssetObservation</code>：STARTED / FAILED / PROGRESS<br><code>Materialization</code>：terminal 完成<br><code>AssetCheckEvaluation</code>：gate 結果<br><code>Run</code>：retry / terminal 狀態</p>
+      </div>
+      <div class="runtime-arrow">→</div>
+      <div class="runtime-col bff">
+        <h3>BFF task / stage projection</h3>
+        <p>只認本次 task 的 run；套用固定 stage 優先級；sensor 回推 + 定時對賬；對同一事件做 idempotent upsert。</p>
+      </div>
+      <div class="runtime-arrow">→</div>
+      <div class="runtime-col ui">
+        <h3>固定六階段 UI</h3>
+        <p>回應永遠包含 ingest、parse、extraction、assemble、validation、publish，不暴露 Dagster 名詞。</p>
+        <div class="state-row">
+          <span class="state pending">pending</span>
+          <span class="state running">running</span>
+          <span class="state pass">succeeded</span>
+          <span class="state fail">failed</span>
+          <span class="state block">blocked</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <div class="callout">
+      <b>Task 成功條件：</b>publish terminal materialized、validation blocking checks passed、
+      publish boundary committed，且 visible version 已切換。
+    </div>
+    <div class="callout green">
+      <b>Template 的交付：</b>contract.py、fake resources、六 stage fixture、validation gate 失敗測試、
+      stage repair jobs、CI contract checks 與部署 values。
+    </div>
+  </div>
+</div>
+<pre id="layout-audit" style="display:none"></pre>
+<script>
+window.addEventListener("load", () => {
+  requestAnimationFrame(() => {
+    const page = document.querySelector(".page");
+    const pageRect = page.getBoundingClientRect();
+    const overflow = [...page.querySelectorAll("*")]
+      .filter((element) => {
+        if (["HTML", "BODY", "SCRIPT", "STYLE"].includes(element.tagName)) return false;
+        return (
+          element.scrollWidth > element.clientWidth + 2 ||
+          element.scrollHeight > element.clientHeight + 2
+        );
+      })
+      .map((element) => ({
+        tag: element.tagName,
+        className: String(element.className || ""),
+        text: (element.textContent || "").trim().slice(0, 50),
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        scrollHeight: element.scrollHeight,
+        clientHeight: element.clientHeight,
+      }));
+    const outside = [...page.querySelectorAll("*")]
+      .filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return (
+          rect.left < pageRect.left - 1 ||
+          rect.top < pageRect.top - 1 ||
+          rect.right > pageRect.right + 1 ||
+          rect.bottom > pageRect.bottom + 1
+        );
+      })
+      .map((element) => ({
+        tag: element.tagName,
+        className: String(element.className || ""),
+        text: (element.textContent || "").trim().slice(0, 50),
+      }));
+    const stages = [...document.querySelectorAll(".stage")].map((element) => ({
+      name: element.querySelector("h2")?.textContent,
+      width: Math.round(element.getBoundingClientRect().width),
+      height: Math.round(element.getBoundingClientRect().height),
+    }));
+    document.getElementById("layout-audit").textContent = JSON.stringify({
+      page: {
+        width: Math.round(pageRect.width),
+        height: Math.round(pageRect.height),
+      },
+      overflow,
+      outside,
+      stages,
+    });
+  });
+});
+</script>
+</body>
+</html>

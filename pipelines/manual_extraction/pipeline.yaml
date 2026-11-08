@@ -1,0 +1,63 @@
+apiVersion: knowledge.pipeline/v1
+kind: KnowledgeExtractionPipeline
+
+metadata:
+  id: manual_extraction
+  version: 0.1.0
+  owner: team:knowledge
+  description: 機台手冊知識抽取
+
+spec:
+  runtime:
+    contractVersion: 1
+    artifactStore: object_store
+
+  partition:
+    keyTemplate: "{doc_id}__{doc_version}"
+    requiredTags:
+      - tenant
+
+  stages:
+    ingest:
+      handler: handlers:ingest
+      timeoutSeconds: 300
+      retry:
+        maxRetries: 2
+        delaySeconds: 2
+        backoff: exponential
+    parse:
+      handler: handlers:parse
+      timeoutSeconds: 3600
+    extraction:
+      handler: handlers:extraction
+      timeoutSeconds: 7200
+      retry:
+        maxRetries: 1
+        delaySeconds: 10
+        backoff: exponential
+    assemble:
+      handler: handlers:assemble
+      timeoutSeconds: 600
+    validation:
+      handler: handlers:validation
+      timeoutSeconds: 600
+    publish:
+      handler: handlers:publish
+      timeoutSeconds: 600
+
+  resources:
+    llm:
+      profile: llm-default
+    embedding:
+      profile: embedding-default
+    index:
+      profile: knowledge-index-default
+
+  options:
+    language: zh-TW
+    maxEntitiesPerChunk: 40
+    maxRelationsPerChunk: 40
+
+  fixtures:
+    request: fixtures/request.json
+    source: fixtures/sample.pdf

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "km-pipeline-template"
+version = "0.1.0"
+description = "Manifest-driven six-stage knowledge pipeline SDK for Dagster"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dagster>=1.13,<1.14",
+    "jsonschema>=4.20",
+    "pydantic>=2.7,<3",
+    "PyYAML>=6.0",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "dagster-webserver==1.13.22",
+    "pytest>=8",
+]
+
+[project.scripts]
+km = "km_sdk.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["km_sdk*", "pipelines*"]
+
+[tool.setuptools.package-data]
+km_sdk = ["py.typed", "schema/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "pipelines/manual_extraction/tests"]
+addopts = "-p no:logging"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

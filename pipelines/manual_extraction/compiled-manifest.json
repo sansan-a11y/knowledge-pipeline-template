@@ -1,0 +1,34 @@
+{
+  "pipeline_id": "manual_extraction",
+  "pipeline_version": "0.1.0",
+  "contract_version": 1,
+  "stages": [
+    {
+      "stage": "ingest",
+      "asset": "km/manual_extraction/ingested_document"
+    },
+    {
+      "stage": "parse",
+      "asset": "km/manual_extraction/parsed_document"
+    },
+    {
+      "stage": "extraction",
+      "asset": "km/manual_extraction/extracted_knowledge"
+    },
+    {
+      "stage": "assemble",
+      "asset": "km/manual_extraction/assembled_document"
+    },
+    {
+      "stage": "validation",
+      "asset": "km/manual_extraction/validation_report"
+    },
+    {
+      "stage": "publish",
+      "asset": "km/manual_extraction/published_document"
+    }
+  ],
+  "schema_hash": "sha256:ddb5dcfbaf394a28cd202d0f482b38513041471b204ffda96647062ae4c369ae",
+  "handler_api_version": 1,
+  "sdk_version": "0.1.0"
+}

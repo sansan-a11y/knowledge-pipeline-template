@@ -1,0 +1,7 @@
+{
+  "doc_id": "demo",
+  "doc_version": "v1",
+  "tenant": "demo-tenant",
+  "source_uri": "fixtures/sample.pdf",
+  "mime_type": "application/pdf"
+}

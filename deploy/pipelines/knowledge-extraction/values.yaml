@@ -1,0 +1,80 @@
+# 部门 code location release · 用官方 dagster-user-deployments chart 单独发布
+# 本文件对应"知识抽取 · 机台手册 pipeline"（VLM 逐页分类 → 动态分区图谱抽取 → 汇总）
+#
+#   helm install ke-manual-extraction dagster/dagster-user-deployments \
+#     -n dagster -f deploy/pipelines/knowledge-extraction/values.yaml
+#
+# 这个 release 只包含：一个 Deployment（gRPC code server）+ 一个 Service。
+# 它不创建存储、不创建调度器、不碰实例配置 —— 那些都属于平台 release。
+
+global:
+  dagsterHome: "/opt/dagster/dagster_home"
+  # 平台 release 创建的同名 Secret，同 namespace 直接引用（Secret 不能跨 namespace）
+  postgresqlSecretName: "dagster-postgresql-secret"
+
+# 与平台 release 同 namespace 时设为 true，让 location 启动期也能读到实例信息
+includeInstance: true
+
+imagePullSecrets:
+  - name: corp-registry
+
+serviceAccount:
+  create: true        # 默认名 <release名>-user-deployments，也是 run pod 使用的 SA
+rbacEnabled: true     # 允许该 SA 创建 Jobs/Pods
+
+deployments:
+  # name 就是 Service 名，也是 workspace.yaml 里的 host —— 全局唯一，不要带 release 前缀
+  - name: ke-manual-extraction
+
+    image:
+      # 从平台 base 镜像派生，保证 dagster 版本与 webserver/daemon 一致
+      repository: registry.corp/knowledge/manual-extraction
+      tag: "2026.10.07-ab12cd3"        # 不可变 tag：日期 + git sha，禁止 latest
+      pullPolicy: IfNotPresent
+
+    # 启动 gRPC code server 的方式（等价于 dagster api grpc -m <module>）
+    dagsterApiGrpcArgs:
+      - "-m"
+      - "km_sdk.dagster_defs"
+    port: 3030
+    replicaCount: 2
+
+    # 这一行是"run 继承本 location 环境"的开关，默认 true，显式写出来防止被误关
+    includeConfigInLaunchedRuns:
+      enabled: true
+
+    # map 形式 -> chart 会写进 <release>-<name>-user-env ConfigMap，并以 env_config_maps 注入 run
+    env:
+      KM_PIPELINE_MANIFEST: "/app/pipeline/pipeline.yaml"
+      KM_PIPELINE_ROOT: "/app/pipeline"
+      KE_OBJECT_STORE_ENDPOINT: "s3://corp-manuals"
+      KE_LLM_GATEWAY: "http://llm-gateway.dagster.svc.cluster.local"
+      KE_VLM_MODEL: "vlm-doc-classify-v3"
+      KE_DYNAMIC_PARTITIONS_NAME: "valid_page"
+
+    # 密级内容走 Secret，不要写进上面的 ConfigMap
+    envSecrets:
+      - name: ke-extraction-secret
+
+    # 抽取是重资源：给足内存，并按"页"级别控制并发由池来做
+    resources:
+      requests: { cpu: "1", memory: 4Gi }
+      limits: { cpu: "4", memory: 12Gi }
+
+    labels:
+      owner: knowledge-extraction-team
+      domain: knowledge
+
+    # 镜像较大 / 依赖较多时放宽就绪与启动探测
+    readinessProbe:
+      enabled: true
+      periodSeconds: 20
+      timeoutSeconds: 10
+      failureThreshold: 15
+    startupProbe:
+      enabled: true
+      periodSeconds: 10
+      failureThreshold: 30
+
+    nodeSelector: {}
+    tolerations: []

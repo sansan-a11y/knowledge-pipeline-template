@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# 新部门 / 新 pipeline 接入模板
+# 复制本目录：deploy/pipelines/<你的 pipeline 名>/values.yaml，替换所有 <...>
+# 交付流程见 docs/11：写资产 → 本地 dagster dev 验证 → CI 过契约检查 → 平台注册上线
+# ─────────────────────────────────────────────────────────────────────────────
+
+global:
+  dagsterHome: "/opt/dagster/dagster_home"
+  postgresqlSecretName: "dagster-postgresql-secret"
+
+includeInstance: true          # 与平台 release 同 namespace 时为 true
+
+imagePullSecrets:
+  - name: corp-registry
+
+serviceAccount:
+  create: true
+rbacEnabled: true
+
+deployments:
+  - name: <team>-<pipeline>    # 全局唯一！它就是 K8s Service 名，也是 UI 里的 location 名
+
+    image:
+      repository: registry.corp/<team>/<pipeline>
+      tag: "<日期>-<git sha>"   # 不可变 tag，禁止 latest
+      pullPolicy: IfNotPresent
+
+    dagsterApiGrpcArgs:
+      - "-m"
+      - "km_sdk.dagster_defs"   # 通用 Manifest SDK entrypoint
+    port: 3030
+    replicaCount: 1
+
+    # 保持 true：run 才会继承本 location 的镜像 / env / 资源 / SA
+    includeConfigInLaunchedRuns:
+      enabled: true
+
+    # 非密级的配置（会进 ConfigMap）；凭证走 envSecrets
+    env:
+      KM_PIPELINE_MANIFEST: "/app/pipeline/pipeline.yaml"
+      KM_PIPELINE_ROOT: "/app/pipeline"
+    envSecrets:
+      - name: <你的 secret 名>
+
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "2", memory: 4Gi }
+
+    labels:
+      owner: <team>
+      domain: <domain>
+
+    readinessProbe:
+      enabled: true
+    startupProbe:
+      enabled: true
+      periodSeconds: 10
+      failureThreshold: 30
+
+# 自检清单（提交前逐条确认）：
+#  1. name 在集群内唯一（kubectl get svc -n dagster 里没有同名）
+#  2. tag 不可变，且 dagster 版本与平台 base 镜像一致
+#  3. 没有在代码里直连对象存储 / 数据库，只用平台 Resource（CI 会卡）
+#  4. 资产的必填 metadata（doc_id / doc_version / pipeline_version）齐全
+#  5. 平台侧已在 values-platform.yaml 的 workspace.servers 里注册本 location
